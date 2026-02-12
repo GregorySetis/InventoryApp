@@ -28,20 +28,20 @@ Google reCAPTCHA – safeguards the contact form against bots.
 
 Vue 3 
 Tailwind CSS 
-Google reCAPTCHA v2 - захист контактної форми від спаму. 
-HTML5 & CSS3 - базова структура та стилізація. 
+Google reCAPTCHA v2 
+HTML5 & CSS3 
 
 Бекенд: 
 
-Node.js + Express - серверна логіка та REST API. 
-PostgreSQL (через pg-promise) - зберігання даних про товари та статистику. 
-Axios - робота з зовнішніми запитами (CAPTCHA перевірка). 
-CORS - забезпечення безпечного обміну даними між фронтендом і бекендом. 
-Файлова система (fs) - збереження контактних повідомлень у текстовий файл. 
+Node.js + Express 
+PostgreSQL (через pg-promise)  
+Axios 
+CORS  
+Файлова система (fs) 
 
 Плагіни та бібліотеки: 
 
-Tailwind CSS CDN - для швидкого застосування стилів. 
-Vue 3 CDN - підключення реактивного фреймворку. 
-Google reCAPTCHA - захист від ботів у формі контактів.
+Tailwind CSS CDN 
+Vue 3 CDN 
+Google reCAPTCHA
 
