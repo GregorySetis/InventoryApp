@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InventoryApp</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    [v-cloak] { display: none; }
+  </style>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+<body class="bg-orange-100 min-h-screen">
+  <div id="app" v-cloak class="container mx-auto px-4 py-0">
+
+    <!-- ========================= -->
+    <!-- Header -->
+    <!-- ========================= -->
+    <header class="fixed top-0 left-0 w-full h-20 bg-gray-900 text-white shadow-lg z-50">
+      <div class="max-w-7xl mx-auto px-6 h-full flex justify-between items-center">
+        <h1 class="text-xl font-bold">InventoryApp</h1>
+
+        <nav class="flex gap-6">
+          <button 
+            @click="scrollToSection('home')" 
+            class="hidden sm:inline px-3 py-2 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+            Home
+          </button>
+
+          <button 
+            @click="scrollToSection('products')" 
+            class="hidden sm:inline px-3 py-2 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+            Products
+          </button>
+
+          <button 
+            @click="scrollToSection('about')" 
+            class="hidden sm:inline px-3 py-2 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+            About
+          </button>
+
+          <button 
+            @click="scrollToSection('contact')" 
+            class="hidden sm:inline px-3 py-2 rounded transition duration-200 hover:bg-gray-700 hover:text-white">
+            Contact
+          </button>
+
+          <button @click="showModal('create')" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-950 transition">
+            Add New Product
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <!-- ========================= -->
+    <!-- Main Content -->
+    <!-- ========================= -->
+    <main class="flex-1 pt-20 pb-20">
+
+      <!-- ========================= -->
+      <!-- Hero Slider -->
+      <!-- ========================= -->
+      <div id="home" class="relative w-full h-[400px] mb-10 overflow-hidden rounded-b-lg shadow-lg">
+        <div
+          class="absolute inset-0 transition-all duration-700 z-0"
+          :style="{ backgroundImage: 'url(' + slides[currentSlide] + ')', backgroundSize: 'cover', backgroundPosition: 'center' }">
+        </div>
+
+        <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+          <div class="text-center text-white">
+            <h2 class="text-4xl font-bold mb-4">Welcome to InventoryApp</h2>
+            <p class="text-lg">Manage your products the right way</p>
+          </div>
+        </div>
+
+        <!-- Slider Controls -->
+        <button @click="prevSlide" class="absolute left-4 top-1/2 -translate-y-1/2 bg-white/70 px-3 py-2 rounded">‹</button>
+        <button @click="nextSlide" class="absolute right-4 top-1/2 -translate-y-1/2 bg-white/70 px-3 py-2 rounded">›</button>
+      </div>
+
+      <!-- ========================= -->
+      <!-- Stats Section -->
+      <!-- ========================= -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2 py-4">
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Inventory Value</h3>
+          <p class="text-2xl font-bold text-gray-900">${{ stats.total_inventory_value || 0 }}</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+          <h3 class="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Items in Stock</h3>
+          <p class="text-2xl font-bold text-gray-900">{{ stats.total_stock || 0 }}</p>
+        </div>
+      </div>
+
+      <!-- ========================= -->
+      <!-- Filters & Search -->
+      <!-- ========================= -->
+      <div id="products" class="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
+        <div class="flex-1 min-w-[200px]">
+          <input
+            type="text"
+            v-model="searchQuery"
+            @input="fetchProducts"
+            placeholder="Search products by name..."
+            class="w-full px-4 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+        </div>
+
+        <div class="flex gap-2 items-center">
+          <span class="text-gray-600">Sort by:</span>
+          <select v-model="sortBy" @change="fetchProducts" class="border rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="created_at">Date Added</option>
+            <option value="name">Name</option>
+            <option value="price">Price</option>
+            <option value="stock">Stock</option>
+          </select>
+          <button @click="toggleOrder" class="p-2 border rounded hover:bg-gray-50">
+            {{ order === 'ASC' ? '↑' : '↓' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- ========================= -->
+      <!-- Products Table -->
+      <!-- ========================= -->
+      <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:inline">Category</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:inline">Stock</th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <tr v-for="product in products" :key="product.id" class="hover:bg-gray-50 transition">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">{{ product.name }}</div>
+                <div class="text-sm text-gray-500">{{ product.description }}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ product.category }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${{ product.price }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ product.stock }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button @click="showModal('edit', product)" class="text-blue-600 hover:text-blue-900 mr-4">Edit</button>
+                <button @click="deleteProduct(product.id)" class="text-red-600 hover:text-red-900">Delete</button>
+              </td>
+            </tr>
+            <tr v-if="products.length === 0">
+              <td colspan="5" class="px-6 py-8 text-center text-gray-500">No products found.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ========================= -->
+      <!-- About Section -->
+      <!-- ========================= -->
+      <section id="about" class="scroll-mt-24 mt-16 bg-white p-10 rounded-lg shadow">
+  
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
+          
+          <div>
+            <h2 class="text-3xl font-bold mb-6 text-gray-900">
+              About InventoryApp
+            </h2>
+      
+            <p class="text-gray-700 mb-4 leading-relaxed">
+              InventoryApp helps businesses manage stock, track inventory value,
+              and control product flow in a simple and efficient way.
+            </p>
+      
+            <p class="text-gray-700 mb-4 leading-relaxed">
+              Our system provides real-time tracking, sorting, and analytics
+              so companies can make better decisions and reduce losses.
+            </p>
+            <p class="text-gray-700 mb-4 leading-relaxed">
+              The platform is built with scalability in mind, allowing teams of any size
+              to organize products, monitor stock levels, and manage updates without
+              unnecessary complexity or technical barriers.
+            </p>
+            
+            <p class="text-gray-700 leading-relaxed">
+              With an intuitive interface and powerful filtering tools, users can quickly
+              find the information they need, streamline daily operations, and maintain
+              full visibility over their inventory at all times.
+            </p>
+          </div>
+    
+          <div class="w-full h-80 md:h-[400px] rounded-lg overflow-hidden shadow">
+            <iframe
+              class="w-full h-full"
+              src="https://www.google.com/maps?q=Kyiv,Ukraine&output=embed"
+              loading="lazy"
+              allowfullscreen>
+            </iframe>
+          </div>
+        </div>
+      
+      </section>
+      
+      <!-- ========================= -->
+      <!-- Contact Section -->
+      <!-- ========================= -->
+      <section id="contact" class="mt-12 bg-white p-10 rounded-lg shadow mb-20">
+        <h2 class="text-3xl font-bold mb-6 text-gray-900">Contact Us</h2>
+
+        <form @submit.prevent="submitContact" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <input type="text" placeholder="Your Name" class="px-4 py-3 border rounded focus:ring-2 focus:ring-blue-500">
+          <input type="email" placeholder="Your Email" class="px-4 py-3 border rounded focus:ring-2 focus:ring-blue-500">
+          <textarea id="message" placeholder="Your Message" class="md:col-span-2 px-4 py-3 border rounded focus:ring-2 focus:ring-blue-500" rows="4"></textarea>
+          <div class="md:col-span-2">
+            <div class="g-recaptcha" data-sitekey="6LfmVGksAAAAABGPe9OuzisCX2cmjEFdJDjl6BMe"></div>
+          </div>
+          <button type="submit" class="md:col-span-2 bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition">
+            Send Message
+          </button>
+        </form>
+      </section>
+    </main>
+
+    <!-- ========================= -->
+    <!-- Footer -->
+    <!-- ========================= -->
+    <footer class="fixed bottom-0 left-0 w-full bg-gray-900 text-white text-center p-6 mt-12">
+      © 2026 InventoryApp. All rights reserved.
+    </footer>
+
+    <!-- ========================= -->
+    <!-- Modal for Create/Edit Product -->
+    <!-- ========================= -->
+    <div v-if="modal.show" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+        <h2 class="text-xl font-bold mb-4">{{ modal.type === 'create' ? 'Add New Product' : 'Edit Product' }}</h2>
+        <form @submit.prevent="saveProduct">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Name</label>
+              <input type="text" v-model="form.name" required class="mt-1 w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Category</label>
+              <input type="text" v-model="form.category" class="mt-1 w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Price ($)</label>
+                <input type="number" step="0.01" v-model="form.price" required class="mt-1 w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Stock</label>
+                <input type="number" v-model="form.stock" required class="mt-1 w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500">
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Description</label>
+              <textarea v-model="form.description" rows="3" class="mt-1 w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"></textarea>
+            </div>
+          </div>
+          <div class="mt-6 flex justify-end gap-3">
+            <button type="button" @click="modal.show = false" class="px-4 py-2 text-gray-700 hover:text-gray-900">Cancel</button>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+              {{ modal.type === 'create' ? 'Create Product' : 'Save Changes' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================= -->
+  <!-- Vue 3 App Script -->
+  <!-- ========================= -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script>
+    const { createApp, ref, onMounted } = Vue;
+
+    createApp({
+      setup() {
+        // =========================
+        // Reactive state
+        // =========================
+        const products = ref([]);
+        const stats = ref({});
+        const searchQuery = ref('');
+        const sortBy = ref('created_at');
+        const order = ref('DESC');
+        const modal = ref({ show: false, type: 'create', productId: null });
+        const form = ref({ name: '', description: '', price: 0, stock: 0, category: '' });
+
+        const slides = ref([
+          'https://images.unsplash.com/photo-1504610926078-a1611febcad3?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+          'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+          'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+        ]);
+        const currentSlide = ref(0);
+
+        // =========================
+        // Slider controls
+        // =========================
+        const nextSlide = () => {
+          currentSlide.value = (currentSlide.value + 1) % slides.value.length;
+        };
+        const prevSlide = () => {
+          currentSlide.value = (currentSlide.value - 1 + slides.value.length) % slides.value.length;
+        };
+        setInterval(nextSlide, 5000);
+
+        // =========================
+        // Products API
+        // =========================
+        const fetchProducts = async () => {
+          const params = new URLSearchParams({
+            search: searchQuery.value,
+            sortBy: sortBy.value,
+            order: order.value
+          });
+          const res = await fetch(`/api/products?${params}`);
+          products.value = await res.json();
+          fetchStats();
+        };
+
+        const fetchStats = async () => {
+          const res = await fetch('/api/products/stats');
+          stats.value = await res.json();
+        };
+
+        const toggleOrder = () => {
+          order.value = order.value === 'ASC' ? 'DESC' : 'ASC';
+          fetchProducts();
+        };
+
+        const showModal = (type, product = null) => {
+          modal.value = { show: true, type, productId: product?.id };
+          if (product) {
+            form.value = { ...product };
+          } else {
+            form.value = { name: '', description: '', price: 0, stock: 0, category: '' };
+          }
+        };
+
+        const saveProduct = async () => {
+          const url = modal.value.type === 'create' ? '/api/products' : `/api/products/${modal.value.productId}`;
+          const method = modal.value.type === 'create' ? 'POST' : 'PUT';
+          const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(form.value)
+          });
+          if (res.ok) {
+            modal.value.show = false;
+            fetchProducts();
+          }
+        };
+
+        const deleteProduct = async (id) => {
+          if (confirm('Are you sure you want to delete this product?')) {
+            const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+            if (res.ok) fetchProducts();
+          }
+        };
+
+        const scrollToSection = (id) => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth' });
+          }
+        };
+
+        // =========================
+        // Contact Form
+        // =========================
+        const submitContact = async () => {
+          const token = grecaptcha.getResponse();
+          if (!token) {
+            alert("Please complete CAPTCHA");
+            return;
+          }
+          const formData = {
+            name: document.querySelector('input[placeholder="Your Name"]').value.trim(),
+            email: document.querySelector('input[placeholder="Your Email"]').value.trim(),
+            message: document.getElementById('message').value.trim(),
+            token
+          };
+          const res = await fetch('/api/contact', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+          });
+          if (res.ok) {
+            alert("Message sent");
+            grecaptcha.reset();
+          } else {
+            alert("Error sending message");
+          }
+        };
+
+        onMounted(fetchProducts);
+
+        return {
+          products, stats, searchQuery, sortBy, order, modal, form,
+          slides, currentSlide,
+          nextSlide, prevSlide,
+          fetchProducts, toggleOrder,
+          showModal, saveProduct, deleteProduct,
+          submitContact, scrollToSection
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
